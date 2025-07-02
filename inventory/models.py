@@ -166,10 +166,37 @@ class Inventory(models.Model):
         return f"{self.get_change_type_display()} {self.quantity} of {self.product.name}"
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding  # True if this is a new object
+        original_quantity = 0
+
+        if not is_new:
+            try:
+                original = Inventory.objects.get(pk=self.pk)
+                original_quantity = original.quantity
+            except Inventory.DoesNotExist:
+                pass  # should not happen
+
+        # Ensure REMOVE has negative quantity
+        if self.change_type == Inventory.ChangeType.REMOVE:
+            self.quantity = -abs(self.quantity)
+
+        elif self.change_type == Inventory.ChangeType.ADD:
+            self.quantity = abs(self.quantity)
+
+        # If ADJUST, quantity stays as is (positive or negative)
+
         super().save(*args, **kwargs)
 
-        # Automatically update product stock
-        self.product.stock_quantity += self.quantity
-        if self.product.stock_quantity < 0:
-            self.product.stock_quantity = 0
-        self.product.save()
+        # Adjust stock only if it's a new log or quantity has changed
+        if is_new:
+            delta = self.quantity
+        else:
+            delta = self.quantity - original_quantity
+
+        product = self.product
+        product.stock_quantity += delta
+        if product.stock_quantity < 0:
+            product.stock_quantity = 0
+
+        # Direct update to avoid triggering Product.save() again
+        Product.objects.filter(pk=product.pk).update(stock_quantity=product.stock_quantity)

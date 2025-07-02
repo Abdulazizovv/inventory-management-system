@@ -2,6 +2,49 @@ from django.contrib import admin
 from inventory.models import Category, Customer, Product, Inventory
 from django.utils.html import format_html
 
+import os
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+
+
+def export_barcodes_as_pdf(modeladmin, request, queryset):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="product_barcodes.pdf"'
+
+    c = canvas.Canvas(response, pagesize=A4)
+    width, height = A4
+
+    x = 20 * mm
+    y = height - 30 * mm
+    row_height = 30 * mm
+    col_width = 80 * mm
+    items_per_row = 2
+    counter = 0
+
+    for product in queryset:
+        if product.barcode and os.path.exists(product.barcode.path):
+            col = counter % items_per_row
+            row = counter // items_per_row
+
+            current_x = x + (col * col_width)
+            current_y = y - (row * row_height)
+
+            c.drawString(current_x, current_y + 20 * mm, f"{product.name} ({product.code})")
+            c.drawImage(product.barcode.path, current_x, current_y, width=60, height=20)
+
+            counter += 1
+            if counter % (items_per_row * 10) == 0:
+                c.showPage()
+                y = height - 30 * mm
+                counter = 0
+
+    c.save()
+    return response
+
+export_barcodes_as_pdf.short_description = "📄 Export selected barcodes as PDF"
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -55,15 +98,24 @@ class InventoryInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'category', 'unit', 'price', 'stock_quantity', 'barcode_preview', 'is_active')
+    list_display = (
+        'name', 'code', 'category', 'unit', 'price',
+        'stock_quantity', 'barcode_preview', 'product_image_preview', 'is_active'
+    )
     list_filter = ('category', 'is_active', 'unit')
     search_fields = ('name', 'code', 'slug')
-    readonly_fields = ('barcode_preview', 'created_at', 'updated_at')
     prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('barcode_preview', 'product_image_preview', 'created_at', 'updated_at')
     inlines = [InventoryInline]
+    actions = [export_barcodes_as_pdf]
+
     fieldsets = (
         (None, {
-            'fields': ('name', 'slug', 'description', 'unit', 'price', 'stock_quantity', 'image', 'category', 'is_active')
+            'fields': (
+                'name', 'slug', 'description', 'unit', 'price',
+                'stock_quantity', 'image', 'product_image_preview',
+                'category', 'is_active'
+            )
         }),
         ('Barcode', {
             'fields': ('code', 'barcode', 'barcode_preview')
@@ -73,9 +125,15 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
 
+    def product_image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="100" />', obj.image.url)
+        return "-"
+    product_image_preview.short_description = "Product Image"
+
     def barcode_preview(self, obj):
         if obj.barcode:
-            return format_html('<img src="{}" width="150" />', obj.barcode.url)
+            return format_html('<img src="{}" width="100" />', obj.barcode.url)
         return "-"
     barcode_preview.short_description = "Barcode Preview"
 
