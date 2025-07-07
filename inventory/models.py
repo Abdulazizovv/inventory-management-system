@@ -67,7 +67,6 @@ class Category(models.Model):
 class Customer(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255, blank=True, null=True)
-    email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 
@@ -104,7 +103,7 @@ class Product(models.Model):
 
     class Meta:
         verbose_name_plural = 'Products'
-        ordering = ['name']
+        ordering = ['stock_quantity']
 
     def __str__(self):
         return self.name

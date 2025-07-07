@@ -1,0 +1,38 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="mb-4">{{ title }}</h3>
+
+  <form method="post" class="row g-3 shadow-sm p-4 bg-white rounded">
+    {% csrf_token %}
+
+    <div class="col-md-6">
+      <label for="first_name" class="form-label">Ism</label>
+      <input type="text" name="first_name" id="first_name" class="form-control" value="{{ customer.first_name|default_if_none:'' }}" required>
+    </div>
+    <div class="col-md-6">
+      <label for="last_name" class="form-label">Familiya</label>
+      <input type="text" name="last_name" id="last_name" class="form-control" value="{{ customer.last_name|default_if_none:'' }}">
+    </div>
+    <div class="col-md-6">
+      <label for="phone_number" class="form-label">Telefon raqam</label>
+      <input type="text" name="phone_number" id="phone_number" class="form-control" value="{{ customer.phone_number|default_if_none:'' }}">
+    </div>
+    <div class="col-md-6">
+      <label for="address" class="form-label">Manzil</label>
+      <input type="text" name="address" id="address" class="form-control" value="{{ customer.address|default_if_none:'' }}">
+    </div>
+
+    <div class="text-end">
+      <button type="submit" class="btn btn-success">
+        <i class="fa-solid fa-save"></i> Saqlash
+      </button>
+      <a href="{% url 'customers' %}" class="btn btn-secondary">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

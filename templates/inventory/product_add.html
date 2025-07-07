@@ -1,0 +1,88 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Yangi Mahsulot Qo‘shish{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Yangi Mahsulot Qo‘shish</h2>
+
+  <form method="post" enctype="multipart/form-data" class="row g-3 shadow-sm p-4 bg-light rounded">
+    {% csrf_token %}
+
+    <div class="col-lg-4 text-center">
+      <div class="mb-3">
+        <label for="image" class="form-label fw-bold">Mahsulot Rasm</label>
+        <div class="border p-2 rounded bg-white">
+          <img id="previewImage" src="{% static 'images/placeholder.png' %}" alt="Preview" class="img-fluid rounded" style="max-height: 250px;">
+        </div>
+        <input type="file" name="image" id="imageInput" class="form-control mt-2" accept="image/*">
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Mahsulot nomi</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Narxi</label>
+          <input type="number" name="price" class="form-control" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Miqdori</label>
+          <input type="number" name="stock_quantity" class="form-control" required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Birlik</label>
+          <input type="text" name="unit" class="form-control" value="dona">
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label">Kategoriya</label>
+          <select name="category" class="form-select">
+            <option value="">-- Tanlang --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if selected_category and cat.id == selected_category.id %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Tavsif</label>
+          <textarea name="description" rows="3" class="form-control"></textarea>
+        </div>
+
+        <div class="col-md-6 d-flex align-items-center">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
+            <label class="form-check-label" for="is_active">Aktiv mahsulot</label>
+          </div>
+        </div>
+
+        <div class="col-md-6 text-end">
+          <button type="submit" class="btn btn-success"><i class="fas fa-plus-circle"></i> Qo‘shish</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const imageInput = document.getElementById("imageInput");
+  const previewImage = document.getElementById("previewImage");
+
+  imageInput.addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+      previewImage.src = URL.createObjectURL(file);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Mijozlar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Mijozlar ro'yxati</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+      <i class="fa-solid fa-plus"></i> Yangi mijoz
+    </button>
+  </div>
+
+  <!-- Search Form -->
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-4">
+      <input type="text" name="search" class="form-control" placeholder="Ism, familiya yoki telefon"
+             value="{{ request.GET.search }}">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-secondary w-100">Qidirish</button>
+    </div>
+    <div class="col-md-2">
+      <a href="{% url 'customers' %}" class="btn btn-outline-danger w-100">Tozalash</a>
+    </div>
+  </form>
+
+  {% if customers %}
+  <div class="table-responsive shadow-sm">
+    <table class="table table-hover table-bordered">
+      <thead class="table-dark">
+        <tr>
+          <th>Ism</th>
+          <th>Familiya</th>
+          <th>Telefon</th>
+          <th>Manzil</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in customers %}
+        <tr>
+          <td>{{ customer.first_name }}</td>
+          <td>{{ customer.last_name }}</td>
+          <td>{{ customer.phone_number }}</td>
+          <td>{{ customer.address }}</td>
+          <td>
+            <a href="{% url 'edit_customer' customer.id %}" class="btn btn-sm btn-outline-primary">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+            <a href="{% url 'delete_customer' customer.id %}" class="btn btn-sm btn-outline-danger"
+               onclick="return confirm('Ishonchingiz komilmi?')">
+              <i class="fa-solid fa-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">Mijozlar mavjud emas. Yangi qo'shing.</p>
+  {% endif %}
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'add_customer' %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCustomerModalLabel">Yangi mijoz qo'shish</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="first_name" class="form-label">Ism</label>
+          <input type="text" name="first_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="last_name" class="form-label">Familiya</label>
+          <input type="text" name="last_name" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="phone_number" class="form-label">Telefon</label>
+          <input type="text" name="phone_number" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="address" class="form-label">Manzil</label>
+          <input type="text" name="address" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">
+          <i class="fa-solid fa-save"></i> Saqlash
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

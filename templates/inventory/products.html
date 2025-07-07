@@ -1,0 +1,121 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Mahsulotlar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Mahsulotlar ro'yxati</h2>
+      <a href="{% url 'add_product' %}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Yangi mahsulot
+      </a>
+    </div>
+  
+    <form method="get" class="row g-3 mb-3">
+      <div class="col-md-4">
+        <input type="text" name="search" value="{{ request.GET.search }}" class="form-control" placeholder="Mahsulot nomi yoki kodi">
+      </div>
+      <div class="col-md-3">
+        <select name="category" class="form-select">
+          <option value="">Barcha kategoriyalar</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <input type="number" step="0.01" name="min_price" value="{{ request.GET.min_price }}" class="form-control" placeholder="Narxdan (so'm)">
+      </div>
+      <div class="col-md-2">
+        <input type="number" step="0.01" name="max_price" value="{{ request.GET.max_price }}" class="form-control" placeholder="Narxgacha (so'm)">
+      </div>
+
+      <div class="col-md-2">
+        <input type="number" name="min_stock" value="{{ request.GET.min_stock }}" class="form-control" placeholder="Min zaxira">
+      </div>
+      <div class="col-md-2">
+        <input type="number" name="max_stock" value="{{ request.GET.max_stock }}" class="form-control" placeholder="Max zaxira">
+      </div>
+
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-secondary w-100">Filtrlash</button>
+      </div>
+      <div class="col-md-1">
+        <a href="{% url 'products' %}" class="btn btn-outline-danger w-100">Tozalash</a>
+      </div>
+      <div class="col-md-1">
+        <a href="{% url 'products' %}" class="btn btn-outline-danger w-100"><i class="fa-solid fa-repeat"></i></a>
+      </div>
+    </form>
+  
+    <div class="table-responsive shadow-sm">
+      <table class="table table-hover table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Rasm</th>
+            <th>Mahsulot nomi</th>
+            <th>Kod</th>
+            <th>Kategoriya</th>
+            <th>Narxi</th>
+            <th>Miqdori</th>
+            <th>Birlik</th>
+            <th>Shtrix-kod</th>
+            <th>Holati</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td>
+              {% if product.image %}
+                <img src="{{ product.image.url }}" width="60" class="img-thumbnail" />
+              {% else %}
+                <span class="text-muted">Yo‘q</span>
+              {% endif %}
+            </td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.code }}</td>
+            <td>{{ product.category.name }}</td>
+            <td>{{ product.price|floatformat:0|intcomma }} so'm</td>
+            <td>{{ product.stock_quantity }}</td>
+            <td>{{ product.unit }}</td>
+            <td>
+              {% if product.barcode %}
+                <img src="{{ product.barcode.url }}" width="80" />
+              {% else %}
+                <span class="text-muted">Yo‘q</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if product.is_active %}
+                <span class="badge bg-success">Aktiv</span>
+              {% else %}
+                <span class="badge bg-secondary">Noaktiv</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+              <a href="{% url 'delete_product' product.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Mahsulotni o‘chirishga ishonchingiz komilmi?')">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center text-muted">Mahsulotlar topilmadi.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

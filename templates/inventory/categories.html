@@ -1,0 +1,108 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Kategoriyalar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Kategoriyalar</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+      <i class="fa-solid fa-plus"></i> Yangi kategoriya
+    </button>
+  </div>
+
+  {% if categories %}
+  <div class="table-responsive shadow-sm">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Kategoriya nomi</th>
+          <th>Tavsif</th>
+          <th>Mahsulotlar soni</th>
+          <th>Holati</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            <a href="{% url 'category_detail' category.id %}" class="text-decoration-none">
+              {{ category.name }}
+            </a>
+          </td>
+          <td>{{ category.description|default:"—" }}</td>
+          <td>
+            <span class="badge bg-info">{{ category.product_count }} ta mahsulot</span>
+            <div class="d-flex justify-content-between mt-3">
+              <a href="{% url 'category_detail' category.id %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-eye"></i> Ko‘rish
+              </a>
+              <a href="{% url 'add_product' %}?category={{ category.id }}" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-plus"></i> Mahsulot qo‘shish
+              </a>
+            </div>
+          </td>
+          <td>
+            {% if category.is_active %}
+              <span class="badge bg-success">Aktiv</span>
+            {% else %}
+              <span class="badge bg-secondary">Noaktiv</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'category_detail' category.id %}" class="btn btn-sm btn-outline-primary">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+            <form method="post" action="{% url 'delete_category' category.id%}" style="display:inline-block;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('O‘chirishni istaysizmi?')">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info">Hozircha hech qanday kategoriya mavjud emas.</div>
+  {% endif %}
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCategoryModalLabel">Yangi kategoriya qo‘shish</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Kategoriya nomi</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Tavsif (ixtiyoriy)</label>
+          <textarea name="description" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" class="form-check-input" name="is_active" id="isActive" checked>
+          <label class="form-check-label" for="isActive">Aktiv holatda</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-save"></i> Saqlash</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

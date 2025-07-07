@@ -1,0 +1,90 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Mahsulotni tahrirlash{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h3 class="mb-4">Mahsulotni tahrirlash</h3>
+  <form method="post" enctype="multipart/form-data" class="row g-4">
+    {% csrf_token %}
+
+    <!-- Left: Product image -->
+    <div class="col-md-4 text-center">
+      <label for="id_image">
+        {% if product.image %}
+          <img src="{{ product.image.url }}" id="imagePreview" class="img-fluid rounded shadow" style="cursor: pointer;" />
+        {% else %}
+          <div class="border p-4 text-muted bg-light rounded" id="imagePreview">
+            <i class="fa-solid fa-image fa-3x"></i>
+            <p class="mt-2">Rasm tanlanmagan</p>
+          </div>
+        {% endif %}
+        <input type="file" id="id_image" name="image" class="d-none" accept="image/*">
+      </label>
+      <p class="text-muted mt-2">Rasmni o'zgartirish uchun ustiga bosing</p>
+    </div>
+
+    <!-- Right: Product info -->
+    <div class="col-md-8">
+      <div class="card shadow-sm p-4">
+        <div class="mb-3">
+          <label for="id_name" class="form-label">Mahsulot nomi</label>
+          <input type="text" name="name" value="{{ product.name }}" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_price" class="form-label">Narxi</label>
+          <input type="number" name="price" value="{{ product.price }}" class="form-control" step="1000" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_unit" class="form-label">Birligi</label>
+          <input type="text" name="unit" value="{{ product.unit }}" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="id_stock_quantity" class="form-label">Ombordagi miqdori</label>
+          <input type="number" name="stock_quantity" value="{{ product.stock_quantity }}" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="id_category" class="form-label">Kategoriya</label>
+          <select name="category" class="form-select">
+            {% for cat in categories %}
+              <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>
+                {{ cat.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="id_description" class="form-label">Tavsif</label>
+          <textarea name="description" rows="3" class="form-control">{{ product.description }}</textarea>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="is_active" id="id_is_active" {% if product.is_active %}checked{% endif %}>
+          <label class="form-check-label" for="id_is_active">Aktiv holatda</label>
+        </div>
+
+        <div class="text-end">
+          <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-save"></i> Saqlash
+          </button>
+          <a href="{% url 'products' %}" class="btn btn-secondary">Bekor qilish</a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const fileInput = document.getElementById('id_image');
+  const imagePreview = document.getElementById('imagePreview');
+
+  fileInput.addEventListener('change', function () {
+    const file = fileInput.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => imagePreview.src = e.target.result;
+      reader.readAsDataURL(file);
+    }
+  });
+</script>
+{% endblock %}
