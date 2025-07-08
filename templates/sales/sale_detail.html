@@ -1,0 +1,87 @@
+{% extends "main/base.html" %}
+{% load humanize %}
+
+{% block title %}Buyurtma #{{ sale.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-gradient text-white" style="background: linear-gradient(to right, #6a11cb, #2575fc);">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-black">📦 Buyurtma #{{ sale.id }}</h5>
+        <small><i class="fa fa-clock me-1"></i> {{ sale.created_at|naturaltime }}</small>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row gy-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>👤 Mijoz:</strong> {{ sale.customer.full_name }}</p>
+          <p class="mb-1"><strong>📞 Telefon:</strong> {{ sale.customer.phone_number }}</p>
+          {% if sale.customer.address %}
+            <p class="mb-1"><strong>📍 Manzil:</strong> {{ sale.customer.address }}</p>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          {% if sale.location %}
+            <p class="mb-1"><strong>🚚 Buyurtma manzili:</strong> {{ sale.location }}</p>
+          {% endif %}
+          {% if sale.description %}
+            <p class="mb-1"><strong>📝 Izoh:</strong> {{ sale.description }}</p>
+          {% endif %}
+          {% if sale.created_by %}
+            <p class="mb-1"><strong>👨‍💼 Yaratgan:</strong> {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr>
+
+      <h6 class="mt-4 mb-3"><i class="fa fa-boxes-stacked me-1"></i> Mahsulotlar ro'yxati:</h6>
+
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover table-sm align-middle">
+          <thead class="table-light">
+            <tr class="text-center">
+              <th>#</th>
+              <th>Mahsulot</th>
+              <th>Bir narx</th>
+              <th>Soni</th>
+              <th>Chegirma</th>
+              <th>Jami</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in sale.items.all %}
+              <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.unit_price|floatformat:0|intcomma }} so'm</td>
+                <td class="text-center">{{ item.quantity }}</td>
+                <td>{{ item.discount|floatformat:0|intcomma }} so'm</td>
+                <td class="fw-bold text-end text-success">
+                  {{ item.total_price|floatformat:0|intcomma }} so'm
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="text-end mt-3">
+        <h5 class="text-primary">Jami summa: 
+          <strong>{{ sale.total_amount|floatformat:0|intcomma }} so'm</strong>
+        </h5>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-between">
+    <a href="{% url 'sale_list' %}" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-list"></i> Barcha buyurtmalar
+    </a>
+    <a href="{% url 'sale_create_page' %}" class="btn btn-success">
+      <i class="fa-solid fa-plus"></i> Yangi Buyurtma
+    </a>
+  </div>
+</div>
+{% endblock %}

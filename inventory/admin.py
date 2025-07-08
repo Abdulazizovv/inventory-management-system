@@ -1,5 +1,5 @@
 from django.contrib import admin
-from inventory.models import Category, Customer, Product, Inventory
+from inventory.models import Category, Customer, Product, Inventory, Sale, SaleItem
 from django.utils.html import format_html
 
 import os
@@ -145,3 +145,26 @@ class InventoryAdmin(admin.ModelAdmin):
     search_fields = ('product__name', 'created_by__username', 'note')
     readonly_fields = ('timestamp',)
     ordering = ('-timestamp',)
+
+
+class SaleItemInline(admin.TabularInline):
+    model = SaleItem
+    extra = 0
+    can_delete = False
+
+
+@admin.register(Sale)
+class SaleAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'total_amount', 'created_at',)
+    search_fields = ('customer__first_name', 'customer__last_name', 'customer__phone_number')
+    readonly_fields = ('created_at', 'total_amount', 'description')
+    inlines = [SaleItemInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('customer', 'total_amount', 'description')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',)
+        }),
+    )

@@ -1,0 +1,165 @@
+{% extends "main/base.html" %}
+{% load humanize %}
+{% load querystring %}
+
+{% block title %}Barcha Buyurtmalar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Barcha Buyurtmalar</h4>
+    <a href="{% url 'sale_create_page' %}" class="btn btn-success">+ Yangi Buyurtma</a>
+  </div>
+
+  <!-- Filters and search -->
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <input type="text" name="q" class="form-control" placeholder="🔍 Mijoz ismi yoki telefon" value="{{ request.GET.q }}">
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="from_date" class="form-control" value="{{ request.GET.from_date }}">
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="to_date" class="form-control" value="{{ request.GET.to_date }}">
+    </div>
+    <div class="col-md-2">
+      <select name="customer_id" class="form-select">
+        <option value="">Mijoz tanlang</option>
+        {% for customer in customers %}
+          <option value="{{ customer.id }}" {% if request.GET.customer_id == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100">Filtrlash</button>
+    </div>
+    <!-- <div class="col-md-1">
+      <a href="{% querystring export='excel' %}" class="btn btn-outline-secondary w-100">Excel</a>
+    </div> -->
+  </form>
+
+  <!-- Stats -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card border-left-primary shadow h-100 py-2 bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-primary fw-bold">Bugungi buyurtmalar</h6>
+              <h5>{{ stats.today }} ta</h5>
+              <span class="badge bg-primary">💰 {{ stats.today_total|floatformat:0|intcomma }} so'm</span>
+            </div>
+            <i class="fas fa-calendar-day fa-2x text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-left-success shadow h-100 py-2 bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-success fw-bold">Haftalik buyurtmalar</h6>
+              <h5>{{ stats.week }} ta</h5>
+              <span class="badge bg-success">💰 {{ stats.week_total|floatformat:0|intcomma }} so'm</span>
+            </div>
+            <i class="fas fa-calendar-week fa-2x text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-left-warning shadow h-100 py-2 bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-warning fw-bold">Oylik buyurtmalar</h6>
+              <h5>{{ stats.month }} ta</h5>
+              <span class="badge bg-warning text-dark">💰 {{ stats.month_total|floatformat:0|intcomma }} so'm</span>
+            </div>
+            <i class="fas fa-calendar-alt fa-2x text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sale table -->
+  <div class="table-responsive">
+    <table class="table table-hover table-striped table-bordered align-middle shadow-sm">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Mijoz</th>
+          <th>Telefon</th>
+          <th>Sana</th>
+          <th>Jami summa</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in sales %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter0|add:sales.start_index|add:0 }}</td>
+          <td><i class="fa fa-user text-secondary me-1"></i> {{ sale.customer.full_name }}</td>
+          <td><i class="fa fa-phone text-secondary me-1"></i> {{ sale.customer.phone_number }}</td>
+          <td>
+            <div class="d-flex flex-column">
+              <span class="badge bg-light text-dark mb-1">
+                <i class="fa fa-calendar me-1 text-muted"></i> {{ sale.created_at|date:"Y-m-d" }}
+              </span>
+              <span class="badge bg-secondary">
+                <i class="fa fa-clock me-1 text-white-50"></i> {{ sale.created_at|date:"H:i" }}
+              </span>
+            </div>
+          </td>
+          <td>
+            <span class="fw-bold text-primary">
+              {{ sale.total_amount|floatformat:0|intcomma }} so'm
+            </span>
+          </td>
+          <td>
+            <a href="{% url 'sale_detail' sale.id %}" class="btn btn-sm btn-outline-info">
+              <i class="fa fa-eye"></i> Ko‘rish
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">Buyurtmalar topilmadi.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-center">
+    {% if sales.has_other_pages %}
+      <ul class="pagination">
+        {% if sales.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="{% querystring page=sales.previous_page_number %}">Oldingi</a>
+          </li>
+        {% endif %}
+        {% for num in sales.paginator.page_range %}
+          {% if sales.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > sales.number|add:-3 and num < sales.number|add:3 %}
+            <li class="page-item">
+              <a class="page-link" href="{% querystring page=num %}">{{ num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        {% if sales.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="{% querystring page=sales.next_page_number %}">Keyingi</a>
+          </li>
+        {% endif %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

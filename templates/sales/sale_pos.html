@@ -1,0 +1,424 @@
+{% extends "main/base.html" %} 
+{% load static %} 
+{% load humanize %} 
+{% block title %}Yangi Sotuv{% endblock %} 
+
+
+{% block content %}
+
+<style>
+  .product-card .card {
+    border-radius: 12px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .product-card .card:hover {
+    transform: scale(1.02);
+  }
+
+  .product-card img {
+    height: 140px;
+    object-fit: cover;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .product-actions input {
+    width: 40px;
+  }
+</style>
+
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Mahsulotlar</h4>
+    <a href="{% url 'sale_list' %}" class="btn btn-outline-secondary">
+      <i class="fa fa-list"></i> Barcha sotuvlar
+    </a>
+  </div>
+  <div class="row">
+    <!-- Product Section -->
+    <div class="col-md-8">
+      <input
+        type="text"
+        id="searchBox"
+        class="form-control mb-3"
+        placeholder="🔍 Mahsulotni qidiring..."
+      />
+      <div class="row" id="productList">
+        {% for product in products %}
+        <div class="col-md-3 mb-4 product-card"
+          data-id="{{ product.id }}"
+          data-name="{{ product.name|lower }}"
+          data-code="{{ product.code|lower }}"
+          data-price="{{ product.price }}"
+          id="product-{{ product.id }}">
+
+        <div class="card h-100">
+          {% if product.image %}
+          <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+          {% endif %}
+
+          <div class="card-body text-center">
+            <h6 class="fw-bold">{{ product.name }}</h6>
+            <span class="badge bg-secondary mb-1">KOD: {{ product.code }}</span>
+
+            <p class="text-primary fw-bold mb-1">
+              {{ product.price|floatformat:0|intcomma }} so'm
+            </p>
+
+            <div class="mb-1">
+              {% if product.stock_quantity > 10 %}
+                <span class="badge bg-success badge-stock">Omborda: {{ product.stock_quantity }} dona</span>
+              {% elif product.stock_quantity > 0 %}
+                <span class="badge bg-warning text-dark badge-stock">Kam: {{ product.stock_quantity }} dona</span>
+              {% else %}
+                
+                <span class="badge bg-danger badge-stock">{% if not product.is_active %}Mahsulot sotuvda emas!{% else %}Omborda qolmagan!{% endif %}</span>
+                
+              {% endif %}
+            </div>
+
+
+            <div class="product-actions" id="actions-{{ product.id }}">
+              {% if not product.is_active or product.stock_quantity <= 0 %}
+                <button class="btn btn-sm btn-secondary w-100" disabled>
+                  <i class="fa fa-ban"></i> Mavjud emas
+                </button>
+              {% else %}
+                <button class="btn btn-sm btn-outline-primary w-100 add-to-cart"
+                        data-id="{{ product.id }}"
+                        data-name="{{ product.name }}"
+                        data-price="{{ product.price }}"
+                        data-stock="{{ product.stock_quantity }}">
+                  <i class="fa fa-cart-plus"></i> Qo‘shish
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Cart Section -->
+    <div class="col-md-4">
+      <form id="saleForm" method="post" action="{% url 'create_sale' %}">
+        {% csrf_token %}
+        <div class="card">
+          <div
+            class="card-header d-flex justify-content-between align-items-center"
+          >
+            <span>🛒 Savatcha</span>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-success"
+              data-bs-toggle="modal"
+              data-bs-target="#addCustomerModal"
+            >
+              + Mijoz
+            </button>
+          </div>
+          <div class="card-body" id="cartItems"></div>
+          <div class="card-footer">
+            <div class="mb-2">
+              <label>Mijoz:</label>
+              <select
+                name="customer_id"
+                class="form-select"
+                id="customerSelect"
+              >
+                <option value="">Tanlang</option>
+                {% for customer in customers %}
+                <option
+                  value="{{ customer.id }}"
+                  data-address="{{ customer.address }}"
+                >
+                  {{ customer.full_name }} ({{ customer.phone_number }})
+                </option>
+
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-2">
+              <input
+                type="text"
+                name="location"
+                class="form-control"
+                placeholder="Manzil"
+              />
+            </div>
+            <div class="mb-2">
+              <textarea
+                name="description"
+                class="form-control"
+                placeholder="Izoh"
+              ></textarea>
+            </div>
+            <p>Jami: <strong id="cartTotal">0</strong> so'm</p>
+            <input type="hidden" name="cart_data" id="cartDataInput" />
+            <button type="submit" class="btn btn-success w-100">
+              Buyurtma qilish
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="addCustomerForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Yangi mijoz</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <input
+          type="text"
+          name="first_name"
+          class="form-control mb-2"
+          placeholder="Ism"
+          required
+        />
+        <!-- <input type="text" name="last_name" class="form-control mb-2" placeholder="Familiya"> -->
+        <input
+          type="text"
+          name="phone_number"
+          class="form-control mb-2"
+          placeholder="Telefon"
+        />
+        <textarea
+          name="address"
+          class="form-control"
+          placeholder="Manzil"
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Qo‘shish</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let cart = [];
+
+  function renderCart() {
+    const cartItems = document.getElementById("cartItems");
+    const cartTotal = document.getElementById("cartTotal");
+    const cartDataInput = document.getElementById("cartDataInput");
+    cartItems.innerHTML = "";
+    let total = 0;
+
+    cart.forEach((item, index) => {
+      const subtotal = item.price * item.quantity - item.discount;
+      total += subtotal;
+      cartItems.innerHTML += `
+      <div class="border p-2 mb-2">
+        <div><strong>${item.name}</strong></div>
+        <div class="d-flex align-items-center">
+          <input type="number" class="form-control me-2" min="1" value="${
+            item.quantity
+          }" onchange="updateQuantity(${index}, this.value)">
+          <input type="number" class="form-control me-2" placeholder="Chegirma" value="${
+            item.discount
+          }" onchange="updateDiscount(${index}, this.value)">
+          <span class="me-2">${subtotal.toFixed(0)} so'm</span>
+          <button class="btn btn-sm btn-danger" onclick="removeItem(${index})">🗑</button>
+        </div>
+      </div>
+    `;
+    });
+
+    cartTotal.textContent = total.toFixed(0);
+    cartDataInput.value = JSON.stringify(cart);
+  }
+
+  function updateQuantity(index, value) {
+    cart[index].quantity = Math.max(1, parseInt(value));
+    renderCart();
+    renderProductCard(cart[index].id);
+  }
+
+  function updateDiscount(index, value) {
+    cart[index].discount = parseFloat(value) || 0;
+    renderCart();
+  }
+
+  function removeItem(index) {
+    const removed = cart.splice(index, 1)[0];
+    renderCart();
+    renderProductCard(removed.id);
+  }
+
+  function renderProductCard(id) {
+    const item = cart.find((p) => p.id == id);
+    const actionsDiv = document.getElementById(`actions-${id}`);
+    const card = document.getElementById(`product-${id}`);
+    const name = card.dataset.name;
+    const price = card.dataset.price;
+
+    if (item) {
+      actionsDiv.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center">
+        <button class="btn btn-sm btn-outline-danger me-2" onclick="decrementItem(${id})">−</button>
+        <input type="text" value="${item.quantity}" class="form-control text-center" readonly style="width: 40px;">
+        <button class="btn btn-sm btn-outline-success ms-2" onclick="incrementItem(${id})">+</button>
+      </div>
+    `;
+    } else {
+      actionsDiv.innerHTML = `
+      <button class="btn btn-sm btn-outline-primary w-100 add-to-cart"
+              data-id="${id}"
+              data-name="${name}"
+              data-price="${price}">
+        <i class="fa fa-cart-plus"></i> Qo‘shish
+      </button>
+    `;
+    }
+  }
+
+  function incrementItem(id) {
+    const item = cart.find((p) => p.id == id);
+    if (item) item.quantity += 1;
+    renderCart();
+    renderProductCard(id);
+  }
+
+  function decrementItem(id) {
+    const item = cart.find((p) => p.id == id);
+    if (item) {
+      item.quantity -= 1;
+      if (item.quantity < 1) {
+        cart = cart.filter((p) => p.id != id);
+      }
+    }
+    renderCart();
+    renderProductCard(id);
+  }
+
+  // Add to cart button
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".add-to-cart")) {
+      const btn = e.target.closest(".add-to-cart");
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      const price = parseFloat(btn.dataset.price);
+
+      const existing = cart.find((p) => p.id == id);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({ id, name, price, quantity: 1, discount: 0 });
+      }
+      renderCart();
+      renderProductCard(id);
+    }
+  });
+
+  // Auto-fill address when customer is selected
+  document
+    .getElementById("customerSelect")
+    .addEventListener("change", function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const address = selectedOption.getAttribute("data-address");
+      const locationInput = document.querySelector('input[name="location"]');
+      if (address && address.trim()) {
+        locationInput.value = address;
+      } else {
+        locationInput.value = "";
+      }
+    });
+
+  // ✅ Product search: by name or code
+  document.getElementById("searchBox").addEventListener("input", function () {
+    const query = this.value.toLowerCase();
+    document.querySelectorAll(".product-card").forEach((card) => {
+      const name = card.dataset.name;
+      const code = card.dataset.code;
+      card.style.display =
+        name.includes(query) || code.includes(query) ? "block" : "none";
+    });
+  });
+
+  // ✅ AJAX: Add new customer
+  document
+    .getElementById("addCustomerForm")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+      const form = this;
+      const data = new FormData(form);
+
+      fetch("{% url 'add_customer_ajax' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": data.get("csrfmiddlewaretoken"),
+        },
+        body: data,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            const option = document.createElement("option");
+            option.value = data.customer.id;
+            option.textContent = `${data.customer.full_name} (${data.customer.phone_number})`;
+            option.setAttribute("data-address", data.customer.address || "");
+            document.getElementById("customerSelect").appendChild(option);
+            option.selected = true;
+
+            // ✅ Prefill the address input if available
+            const locationInput = document.querySelector(
+              'input[name="location"]'
+            );
+            locationInput.value = data.customer.address || "";
+
+            form.reset();
+            bootstrap.Modal.getInstance(
+              document.getElementById("addCustomerModal")
+            ).hide();
+          } else {
+            alert("Xatolik! Mijoz qo‘shilmadi.");
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Server bilan muammo yuz berdi.");
+        });
+    });
+
+
+    let isSubmitting = false;
+    document.getElementById("saleForm").addEventListener("submit", function (e) {
+      if (isSubmitting) {
+        e.preventDefault();
+        return;
+      }
+
+      const customer = document.getElementById("customerSelect").value;
+      if (!customer) {
+        alert("Iltimos, mijozni tanlang.");
+        e.preventDefault();
+        return;
+      }
+
+      if (cart.length === 0) {
+        alert("Iltimos, kamida bitta mahsulot qo‘shing.");
+        e.preventDefault();
+        return;
+      }
+
+      isSubmitting = true;
+    });
+
+</script>
+
+{% endblock %}

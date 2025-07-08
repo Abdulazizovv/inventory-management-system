@@ -1,20 +1,42 @@
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from decimal import Decimal, InvalidOperation
+import json
+from django.core.paginator import Paginator
+from django.utils.timezone import now, timedelta
 
-from inventory.models import Category, Product, Inventory, Customer
+from inventory.models import Category, Product, Inventory, Customer, Sale, SaleItem
 
 
 @login_required
 def home(request):
-    """
-    Render the home page of the inventory app.
-    """
-    return render(request, 'inventory/home.html')
+    today = now().date()
+
+    total_products = Product.objects.count()
+    total_customers = Customer.objects.count()
+    today_sales = (
+        Sale.objects.filter(created_at__date=today)
+        .aggregate(total=Sum('total_amount'))['total'] or 0
+    )
+    total_stock = Product.objects.aggregate(total=Sum('stock_quantity'))['total'] or 0
+
+    recent_sales = Sale.objects.select_related('customer').order_by('-created_at')[:5]
+    low_stock_products = Product.objects.filter(stock_quantity__lt=10, is_active=True)
+
+    context = {
+        'total_products': total_products,
+        'total_customers': total_customers,
+        'today_sales': today_sales,
+        'total_stock': total_stock,
+        'recent_sales': recent_sales,
+        'low_stock_products': low_stock_products,
+    }
+    return render(request, 'inventory/home.html', context)
 
 def login_view(request):
     """
@@ -359,3 +381,156 @@ def delete_customer(request, customer_id):
     customer.delete()
     messages.success(request, 'Mijoz o‘chirildi.')
     return redirect('customers')
+
+
+def create_sale_view(request):
+    customers = Customer.objects.all()
+    products = Product.objects.all()
+    return render(request, 'sales/sale_pos.html', {
+        'customers': customers,
+        'products': products,
+    })
+
+
+@login_required
+def create_sale(request):
+    if request.method == 'POST':
+        customer_id = request.POST.get('customer_id')
+        location = request.POST.get('location', '')
+        description = request.POST.get('description', '')
+        cart_data = request.POST.get('cart_data', '[]')
+
+        if not customer_id or not cart_data:
+            messages.error(request, "Mijoz va mahsulotlar talab qilinadi.")
+            return redirect('sale_create_page')  # replace with your actual URL name
+
+        try:
+            customer = Customer.objects.get(id=customer_id)
+            cart_items = json.loads(cart_data)
+
+            # 1. Create Sale
+            sale = Sale.objects.create(
+                customer=customer,
+                created_by=request.user,
+                location=location,
+                description=description,
+                total_amount=sum((item['price'] * item['quantity']) - item['discount'] for item in cart_items)
+            )
+
+            # 2. Create SaleItems
+            for item in cart_items:
+                product = Product.objects.get(id=item['id'])
+                SaleItem.objects.create(
+                    sale=sale,
+                    product=product,
+                    unit_price=item['price'],
+                    quantity=item['quantity'],
+                    discount=item['discount']
+                )
+            # 3. Update Product Stock
+            for item in cart_items:
+                product = Product.objects.get(id=item['id'])
+                product.stock_quantity -= item['quantity']
+                if product.stock_quantity < 0:
+                    messages.error(request, f"{product.name} uchun yetarli zaxira mavjud emas.")
+                    return redirect('sale_create_page')
+                product.save()
+
+            messages.success(request, "Buyurtma muvaffaqiyatli yaratildi.")
+            # return redirect('sale_create_page')
+            return redirect('sale_detail', pk=sale.pk)
+
+        except Exception as e:
+            messages.error(request, f"Xatolik yuz berdi: {e}")
+            return redirect('sale_create_page')
+
+    return redirect('sale_create_page')
+
+def sale_detail(request, pk):
+    sale = get_object_or_404(Sale.objects.select_related('customer').prefetch_related('items__product'), pk=pk)
+    return render(request, 'sales/sale_detail.html', {'sale': sale})
+
+
+def add_customer_ajax(request):
+    if request.method == 'POST':
+        customer = Customer.objects.create(
+            first_name=request.POST['first_name'],
+            last_name=request.POST.get('last_name', ''),
+            phone_number=request.POST.get('phone_number', ''),
+            address=request.POST.get('address', '')
+        )
+        return JsonResponse({
+            'success': True,
+            'customer': {
+                'id': customer.id,
+                'full_name': customer.full_name,
+                'phone_number': customer.phone_number,
+                'address': customer.address
+            }
+        })
+    return JsonResponse({'success': False}, status=400)
+
+
+from django.shortcuts import render
+from django.db.models import Q, Sum
+from django.core.paginator import Paginator
+from django.utils.timezone import now
+from datetime import timedelta
+from .models import Sale, Customer
+
+def sale_list(request):
+    sales = Sale.objects.select_related("customer").order_by("-created_at")
+
+    q = request.GET.get("q")
+    customer_id = request.GET.get("customer_id")  # HTML da `name="customer_id"`
+    date_from = request.GET.get("from_date")      # HTML da `name="from_date"`
+    date_to = request.GET.get("to_date")          # HTML da `name="to_date"`
+
+    # Filtering
+    if q:
+        sales = sales.filter(
+            Q(customer__first_name__icontains=q) |
+            Q(customer__last_name__icontains=q) |
+            Q(customer__phone_number__icontains=q)
+        )
+
+    if customer_id:
+        sales = sales.filter(customer_id=customer_id)
+
+    if date_from:
+        sales = sales.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        sales = sales.filter(created_at__date__lte=date_to)
+
+    # Pagination
+    paginator = Paginator(sales, 20)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # Statistika
+    today = now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today.replace(day=1)
+
+    stats = {
+        'today': Sale.objects.filter(created_at__date=today).count(),
+        'today_total': Sale.objects.filter(created_at__date=today).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+
+        'week': Sale.objects.filter(created_at__date__gte=week_ago).count(),
+        'week_total': Sale.objects.filter(created_at__date__gte=week_ago).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+
+        'month': Sale.objects.filter(created_at__date__gte=month_ago).count(),
+        'month_total': Sale.objects.filter(created_at__date__gte=month_ago).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+    }
+
+    context = {
+        "sales": page_obj,
+        "customers": Customer.objects.all(),
+        "stats": stats,
+        "q": q,
+        "customer_id": customer_id,
+        "from_date": date_from,
+        "to_date": date_to,
+    }
+    return render(request, "sales/sale_list.html", context)

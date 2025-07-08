@@ -1,77 +1,121 @@
 {% extends 'main/base.html' %}
-{% load static %}
-
+{% load humanize %}
 {% block title %}Bosh sahifa{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-  <div class="text-center mb-4">
-    <h1 class="display-5">Omborxona boshqaruv tizimi</h1>
-    <p class="lead text-muted">Sotuvchilar va omborxonachilar uchun qulay nazorat paneli</p>
+<div class="container-fluid mt-4">
+  <h3 class="mb-4">Assalomu alaykum, {{ request.user.first_name }}!</h3>
+
+  <!-- Statistik kartalar -->
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4">
+    <div class="col">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h6 class="card-title text-muted">Jami mahsulotlar</h6>
+          <h3>{{ total_products }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h6 class="card-title text-muted">Jami mijozlar</h6>
+          <h3>{{ total_customers }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h6 class="card-title text-muted">Bugungi sotuvlar</h6>
+          <h3>{{ today_sales|floatformat:0|intcomma }} so'm</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h6 class="card-title text-muted">Ombordagi mahsulotlar</h6>
+          <h3>{{ total_stock|intcomma }}</h3>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100 text-center">
-        <div class="card-body">
-          <h5 class="card-title">Mahsulotlar</h5>
-          <p class="card-text">Yangi mahsulot qo‘shish, tahrirlash va mavjudlarni ko‘rish.</p>
-          <a href="{% url 'products' %}" class="btn btn-outline-primary">Mahsulotlar</a>
-        </div>
-      </div>
-    </div>
+  <!-- Tezkor tugmalar -->
+  <div class="d-flex flex-wrap gap-3 mt-4">
+    <a href="{% url 'create_sale' %}" class="btn btn-success btn-lg">
+      <i class="fa fa-plus-circle"></i> Yangi sotuv
+    </a>
+    <a href="{% url 'products' %}" class="btn btn-outline-primary btn-lg">
+      <i class="fa fa-box"></i> Mahsulotlar
+    </a>
+    <a href="{% url 'customers' %}" class="btn btn-outline-secondary btn-lg">
+      <i class="fa fa-user"></i> Mijozlar
+    </a>
+    <a href="{% url 'sale_list' %}" class="btn btn-outline-dark btn-lg">
+      <i class="fa fa-file-invoice"></i> Sotuvlar ro‘yxati
+    </a>
+  </div>
 
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100 text-center">
-        <div class="card-body">
-          <h5 class="card-title">Kategoriya</h5>
-          <p class="card-text">Mahsulot kategoriyalarini boshqarish.</p>
-          <a href="" class="btn btn-outline-secondary">Kategoriyalar</a>
-        </div>
-      </div>
+  <!-- So‘nggi sotuvlar -->
+  <div class="mt-5">
+    <h5>So‘nggi sotuvlar</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Mijoz</th>
+            <th>Sana</th>
+            <th>Summa</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in recent_sales %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ sale.customer.full_name }}</td>
+            <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ sale.total_amount|floatformat:0|intcomma }} so'm</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center">Sotuvlar mavjud emas.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100 text-center">
-        <div class="card-body">
-          <h5 class="card-title">Ombor harakatlari</h5>
-          <p class="card-text">Inventar o‘zgarishlari loglarini ko‘rish.</p>
-          <a href="" class="btn btn-outline-success">Inventar loglari</a>
-        </div>
-      </div>
+  <!-- Tugayotgan mahsulotlar -->
+  <div class="mt-4">
+    <h5>⚠️ Tugayotgan mahsulotlar</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-warning">
+          <tr>
+            <th>Mahsulot</th>
+            <th>Kod</th>
+            <th>Qolgan miqdor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in low_stock_products %}
+          <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.code }}</td>
+            <td>{{ product.stock_quantity }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center">Hamma mahsulotlar yetarli.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
-
-
-<div class="row mt-4">
-  <div class="col-md-4">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">Mahsulotlar soni</h5>
-        <p class="display-6">10 ta</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-4">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">Jami sotilgan</h5>
-        <p class="display-6">10 mahsulot</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-4">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">Umumiy tushum</h5>
-        <p class="display-6">1000000 so'm</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-
 {% endblock %}

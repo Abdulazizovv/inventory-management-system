@@ -77,6 +77,10 @@ class Customer(models.Model):
         verbose_name_plural = 'Customers'
         ordering = ['last_name', 'first_name']
 
+    @property
+    def full_name(self):
+        return self.first_name
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.phone_number})"
     
@@ -199,3 +203,25 @@ class Inventory(models.Model):
 
         # Direct update to avoid triggering Product.save() again
         Product.objects.filter(pk=product.pk).update(stock_quantity=product.stock_quantity)
+
+
+class Sale(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True, null=True)  # e.g., store name or address
+    payment_method = models.CharField(max_length=50, blank=True, null=True)  # e.g., cash, card, etc
+    description = models.TextField(blank=True, null=True)  # Additional notes about the sale
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class SaleItem(models.Model):
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    unit_price = models.DecimalField(max_digits=15, decimal_places=2)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    @property
+    def total_price(self):
+        return (self.unit_price * self.quantity) - self.discount
