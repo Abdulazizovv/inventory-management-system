@@ -29,7 +29,7 @@
             <p class="mb-1"><strong>📝 Izoh:</strong> {{ sale.description }}</p>
           {% endif %}
           {% if sale.created_by %}
-            <p class="mb-1"><strong>👨‍💼 Yaratgan:</strong> {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p>
+            <p class="mb-1"><strong>👨‍💼 Yaratgan:</strong> {{ sale.created_by.get_full_name|default:sale.created_by.phone }}</p>
           {% endif %}
         </div>
       </div>
